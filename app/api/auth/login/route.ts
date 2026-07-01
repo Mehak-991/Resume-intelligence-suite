@@ -1,55 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 import { createAuthToken, setAuthCookie, type AuthUser } from "@/lib/auth"
-import clientPromise from "@/lib/mongodb"
+import { getDb } from "@/lib/mongodb"
 import { verifyPassword } from "@/lib/password"
 
 export const runtime = "nodejs"
-
-// TODO: Replace with actual database integration (MongoDB Atlas)
-// TODO: Use bcrypt to verify hashed passwords
-// TODO: Add rate limiting for security
 
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json()
 
-    // TODO: Query database for user
-    // const user = await User.findOne({ email })
-    // if (!user) return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
-
-    // TODO: Verify password with bcrypt
-    // const isValid = await bcrypt.compare(password, user.password)
-    // if (!isValid) return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
-
-    // Mock authentication for development
     if (!email || !password) {
       return NextResponse.json({ message: "Email and password required" }, { status: 400 })
     }
 
-    let client
+    let db
     try {
-      client = await clientPromise
+      db = await getDb("resumeiq")
     } catch (error) {
-      const err = error as unknown as { name?: string; message?: string; code?: string; cause?: { code?: string } }
+      const err = error as Error
+      console.error("[Login] DB connection error:", err.message)
       return NextResponse.json(
         {
-          message: "Database connection failed",
+          message: err.message || "Database connection failed",
           ...(process.env.NODE_ENV !== "production"
-            ? {
-                debug: {
-                  name: err?.name,
-                  code: err?.code || err?.cause?.code,
-                  message: err?.message,
-                },
-              }
+            ? { debug: err.message }
             : {}),
         },
         { status: 503 },
       )
     }
 
-    const db = client.db("resumeiq")
     const users = db.collection("users")
 
     const existingUser = await users.findOne(
@@ -74,27 +55,16 @@ export async function POST(req: NextRequest) {
 
     const token = createAuthToken(user)
 
-    const res = NextResponse.json({
-      token,
-      user,
-    })
+    const res = NextResponse.json({ token, user })
     setAuthCookie(res, token)
     return res
   } catch (error) {
     console.error("Login error:", error)
-    const err = error as unknown as { name?: string; message?: string; code?: string; cause?: { code?: string } }
+    const err = error as Error
     return NextResponse.json(
       {
         message: "Internal server error",
-        ...(process.env.NODE_ENV !== "production"
-          ? {
-              debug: {
-                name: err?.name,
-                code: err?.code || err?.cause?.code,
-                message: err?.message,
-              },
-            }
-          : {}),
+        ...(process.env.NODE_ENV !== "production" ? { debug: err.message } : {}),
       },
       { status: 500 },
     )
