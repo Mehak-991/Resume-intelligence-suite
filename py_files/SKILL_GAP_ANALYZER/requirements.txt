@@ -1,0 +1,31 @@
+# FastAPI server
+fastapi
+uvicorn
+python-multipart
+
+# PDF extraction
+PyMuPDF
+
+# LangGraph workflow
+langgraph
+
+# LangChain + Groq LLM
+langchain-core
+langchain-groq
+langchain-text-splitters
+langchain-huggingface
+langchain-community
+faiss-cpu
+
+# Scraping & Requests
+beautifulsoup4
+requests
+
+# NLP
+spacy
+
+# Visualization
+plotly
+
+# Environment
+python-dotenv
