@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 
 async function main() {
-  const uri = "mongodb://ResumeIQ:Resume123456@ac-24oalsg-shard-00-00.wyqfbjb.mongodb.net:27017,ac-24oalsg-shard-00-01.wyqfbjb.mongodb.net:27017,ac-24oalsg-shard-00-02.wyqfbjb.mongodb.net:27017/resumeiq?ssl=true&replicaSet=atlas-rwm4f4-shard-0&authSource=admin&retryWrites=true&w=majority";
+  const uri = "mongodb://Resumeiq:Resume123456@ac-24oalsg-shard-00-00.wyqfbjb.mongodb.net:27017,ac-24oalsg-shard-00-01.wyqfbjb.mongodb.net:27017,ac-24oalsg-shard-00-02.wyqfbjb.mongodb.net:27017/resumeiq?ssl=true&replicaSet=atlas-rwm4f4-shard-0&authSource=admin&retryWrites=true&w=majority";
   
   console.log("Testing direct connection...");
 

@@ -32,16 +32,29 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await response.json()
+      let data: { message?: string } = {}
+      try {
+        data = await response.json()
+      } catch (jsonErr) {
+        console.error("[Login] Failed to parse server response as JSON:", jsonErr)
+        setError("Server returned an unexpected response. Check the terminal for logs.")
+        return
+      }
 
       if (response.ok) {
         await refresh()
         router.push("/resume")
       } else {
-        setError(data.message || "Login failed")
+        console.error("[Login] Server error:", response.status, data)
+        setError(data.message || `Login failed (HTTP ${response.status})`)
       }
     } catch (err) {
-      setError("An error occurred. Please try again.")
+      console.error("[Login] Network/fetch error:", err)
+      setError(
+        err instanceof Error
+          ? `Network error: ${err.message}`
+          : "Network error. Is the dev server running?"
+      )
     } finally {
       setLoading(false)
     }
