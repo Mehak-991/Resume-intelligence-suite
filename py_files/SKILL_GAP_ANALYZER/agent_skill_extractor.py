@@ -68,19 +68,36 @@ Be comprehensive but accurate. Include:
                 # Parse JSON response
                 try:
                     skills_data = json.loads(response.content)
-                    return skills_data
+                    # Validate skill objects have required fields
+                    validated_skills = []
+                    for skill in skills_data:
+                        if isinstance(skill, dict):
+                            # Normalize skill name - try multiple possible keys
+                            skill_name = skill.get('name') or skill.get('skill') or skill.get('title')
+                            if skill_name:
+                                skill['name'] = skill_name  # Ensure 'name' key exists
+                                validated_skills.append(skill)
+                    return validated_skills
                 except json.JSONDecodeError:
                     # Fallback: try to extract JSON from response
                     import re
                     json_match = re.search(r'\[.*\]', response.content, re.DOTALL)
                     if json_match:
                         skills_data = json.loads(json_match.group())
-                        return skills_data
+                        # Validate skill objects have required fields
+                        validated_skills = []
+                        for skill in skills_data:
+                            if isinstance(skill, dict):
+                                skill_name = skill.get('name') or skill.get('skill') or skill.get('title')
+                                if skill_name:
+                                    skill['name'] = skill_name
+                                    validated_skills.append(skill)
+                        return validated_skills
                     else:
                         raise ValueError("Could not parse JSON from LLM response")
                         
             except Exception as e:
-                print(f"  ⚠️  Attempt {attempt + 1}/{max_retries} failed: {str(e)}")
+                print(f"  [WARNING] Attempt {attempt + 1}/{max_retries} failed: {str(e)}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)  # Exponential backoff
                 else:
@@ -93,7 +110,7 @@ Be comprehensive but accurate. Include:
         Main agent execution
         Extracts skills from both resume and job description
         """
-        print("\n🔍 AGENT 1: Skill Extractor - Starting...")
+        print("\n[SEARCH] AGENT 1: Skill Extractor - Starting...")
         
         try:
             # Validate API key
@@ -101,21 +118,21 @@ Be comprehensive but accurate. Include:
                 raise ValueError("GROQ_API_KEY is not set")
             
             # Extract from resume
-            print("  → Extracting candidate skills from resume...")
+            print("  [EXTRACTING] Extracting candidate skills from resume...")
             candidate_skills = self.extract_skills_with_llm(
                 state["resume_text"],
                 "This is a candidate's resume. Extract their demonstrated skills."
             )
             
             # Extract from job description
-            print("  → Extracting required skills from job description...")
+            print("  [EXTRACTING] Extracting required skills from job description...")
             required_skills = self.extract_skills_with_llm(
                 state["job_description"],
                 "This is a job description. Extract required skills and qualifications."
             )
             
-            print(f"  ✓ Found {len(candidate_skills)} candidate skills")
-            print(f"  ✓ Found {len(required_skills)} required skills")
+            print(f"  [SUCCESS] Found {len(candidate_skills)} candidate skills")
+            print(f"  [SUCCESS] Found {len(required_skills)} required skills")
             
             # Update state
             state["candidate_skills"] = candidate_skills
@@ -124,22 +141,22 @@ Be comprehensive but accurate. Include:
             
             # Print sample results
             if candidate_skills:
-                print(f"  → Sample candidate skills: {[s['name'] for s in candidate_skills[:5]]}")
+                print(f"  [SAMPLE] Sample candidate skills: {[s.get('name', s.get('skill', s.get('title', 'unknown'))) for s in candidate_skills[:5]]}")
             if required_skills:
-                print(f"  → Sample required skills: {[s['name'] for s in required_skills[:5]]}")
+                print(f"  [SAMPLE] Sample required skills: {[s.get('name', s.get('skill', s.get('title', 'unknown'))) for s in required_skills[:5]]}")
             
         except ValueError as ve:
-            print(f"  ✗ Configuration Error: {str(ve)}")
+            print(f"  [ERROR] Configuration Error: {str(ve)}")
             state["extraction_status"] = "failed"
             state["errors"] = [f"SkillExtractor: Configuration error - {str(ve)}"]
             
         except Exception as e:
             error_msg = str(e)
             if "Connection" in error_msg or "API" in error_msg:
-                print(f"  ✗ API Connection Error: {error_msg}")
+                print(f"  [ERROR] API Connection Error: {error_msg}")
                 state["errors"] = [f"SkillExtractor: API connection failed. Please check your GROQ_API_KEY and internet connection."]
             else:
-                print(f"  ✗ Error in Skill Extractor: {error_msg}")
+                print(f"  [ERROR] Error in Skill Extractor: {error_msg}")
                 state["errors"] = [f"SkillExtractor: {error_msg}"]
             
             state["extraction_status"] = "failed"

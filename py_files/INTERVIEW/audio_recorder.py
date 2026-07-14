@@ -56,12 +56,12 @@ class AudioRecorder:
             
             # Save the recording
             sf.write(output_file, audio_data, self.sample_rate)
-            print(f"✅ Recording saved to: {output_file}")
+            print(f"[SUCCESS] Recording saved to: {output_file}")
             
             return output_file
             
         except KeyboardInterrupt:
-            print("\n⏹️ Recording stopped")
+            print("\n[STOPPED] Recording stopped")
             if len(audio_data) > 0:
                 sf.write(output_file, audio_data, self.sample_rate)
                 return output_file
@@ -110,12 +110,12 @@ class AudioRecorder:
             
             # Save the recording
             sf.write(output_file, audio_data, self.sample_rate)
-            print(f"✅ Recording saved to: {output_file}")
+            print(f"[SUCCESS] Recording saved to: {output_file}")
             
             return output_file
             
         except Exception as e:
-            print(f"❌ Recording error: {e}")
+            print(f"[ERROR] Recording error: {e}")
             return None
 
 

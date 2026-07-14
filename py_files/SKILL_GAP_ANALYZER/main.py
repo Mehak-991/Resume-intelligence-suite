@@ -246,9 +246,9 @@ async def create_analysis(
         pdf_bytes = await resume_pdf.read()
         
         # Extract text from PDF
-        print(f"📄 Extracting text from PDF: {resume_pdf.filename}")
+        print(f"[DOCUMENT] Extracting text from PDF: {resume_pdf.filename}")
         resume_text = extract_text_from_pdf(pdf_bytes)
-        print(f"✓ Extracted {len(resume_text)} characters from PDF")
+        print(f"[SUCCESS] Extracted {len(resume_text)} characters from PDF")
         
         # Initialize analysis record
         analysis_results[analysis_id] = {
@@ -261,7 +261,7 @@ async def create_analysis(
         }
         
         # Run analysis immediately/synchronously
-        print(f"⚙️ Running analysis synchronously for ID: {analysis_id}")
+        print(f"[GEAR] Running analysis synchronously for ID: {analysis_id}")
         run_analysis(analysis_id, resume_text, job_description)
         
         status = analysis_results[analysis_id].get("status", "failed")

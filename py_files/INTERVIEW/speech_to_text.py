@@ -41,7 +41,7 @@ class SpeechToText:
             return transcription.text
             
         except Exception as e:
-            print(f"❌ Transcription error: {e}")
+            print(f"[ERROR] Transcription error: {e}")
             return None
 
 

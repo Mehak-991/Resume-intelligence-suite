@@ -11,7 +11,7 @@ const features = [
     description:
       "Get personalized career advice, resume tips, and job-hunting strategies from your 24/7 AI-powered career coach.",
     icon: Bot,
-    href: "/career-assistant",
+    href: "/chatbot",
     stats: "24/7 available",
   },
   {

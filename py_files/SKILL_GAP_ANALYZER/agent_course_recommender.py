@@ -59,7 +59,7 @@ class CourseRecommenderAgent:
             else:
                 level = "advanced"
             formatted_skills.append({
-                "skill": gap['skill'],
+                "skill": gap.get('skill', 'unknown'),
                 "current_level": f"{current_level}/10",
                 "target_level": f"{gap['required_proficiency']}/10",
                 "recommended_difficulty": level
@@ -106,7 +106,7 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
                 else:
                     return []
         except Exception as e:
-            print(f"  ⚠️  Error finding courses in batch: {str(e)}")
+            print(f"  [WARNING] Error finding courses in batch: {str(e)}")
             return []
 
     def find_courses_for_skill(self, skill: str, current_level: float, target_level: float) -> List[CourseRecommendation]:
@@ -124,7 +124,7 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
         # Group courses by skill (deduplicate within each skill)
         roadmap = {}
         for course in courses:
-            skill = course.get('skill')
+            skill = course.get('skill', 'unknown')
             if not skill:
                 continue
             if skill not in roadmap:
@@ -142,7 +142,7 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
         # Reorder roadmap by priority
         prioritized_roadmap = {}
         for gap in sorted_gaps:
-            skill = gap['skill']
+            skill = gap.get('skill', 'unknown')
             if skill in roadmap:
                 prioritized_roadmap[skill] = roadmap[skill]
         
@@ -153,7 +153,7 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
         Main agent execution
         Finds courses for all identified skill gaps
         """
-        print("\n📚 AGENT 3: Course Recommender - Starting...")
+        print("\n[BOOK] AGENT 3: Course Recommender - Starting...")
         
         try:
             # Check if previous agent completed
@@ -166,16 +166,17 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
             unique_gaps = []
             seen_skills = set()
             for gap in skill_gaps:
-                if gap['skill'] not in seen_skills:
+                gap_skill = gap.get('skill', 'unknown')
+                if gap_skill not in seen_skills:
                     unique_gaps.append(gap)
-                    seen_skills.add(gap['skill'])
+                    seen_skills.add(gap_skill)
             
-            print(f"  → Finding courses for {len(unique_gaps)} unique skill gaps...")
+            print(f"  [SEARCHING] Finding courses for {len(unique_gaps)} unique skill gaps...")
             
             # Find courses for each gap (limit to top 10 critical/high priority)
             priority_gaps = [g for g in unique_gaps if g['gap_severity'] in ['critical', 'high']][:10]
             
-            print(f"  → Requesting batch recommendations for {len(priority_gaps)} priority gaps...")
+            print(f"  [REQUESTING] Requesting batch recommendations for {len(priority_gaps)} priority gaps...")
             all_courses = self.find_courses_for_skills_batch(priority_gaps)
             
             # Deduplicate all courses
@@ -184,8 +185,8 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
             # Recalculate total time after deduplication
             total_time = sum(c.get('duration_hours', 0) for c in all_courses)
             
-            print(f"  ✓ Found {len(all_courses)} unique course recommendations")
-            print(f"  ✓ Total estimated learning time: {total_time:.1f} hours ({total_time/40:.1f} weeks at 40h/week)")
+            print(f"  [SUCCESS] Found {len(all_courses)} unique course recommendations")
+            print(f"  [SUCCESS] Total estimated learning time: {total_time:.1f} hours ({total_time/40:.1f} weeks at 40h/week)")
             
             # Create learning roadmap
             roadmap = self.create_learning_roadmap(unique_gaps, all_courses)
@@ -198,10 +199,10 @@ Return ONLY valid JSON array with this exact structure, containing NO markdown b
             
             # Print sample recommendations
             if all_courses:
-                print(f"  → Sample courses: {[c['course_title'][:50] for c in all_courses[:3]]}")
+                print(f"  [SAMPLE] Sample courses: {[c.get('course_title', 'unknown')[:50] for c in all_courses[:3]]}")
             
         except Exception as e:
-            print(f"  ✗ Error in Course Recommender: {str(e)}")
+            print(f"  [ERROR] Error in Course Recommender: {str(e)}")
             state["recommendation_status"] = "failed"
             state["errors"] = state.get("errors", []) + [f"CourseRecommender: {str(e)}"]
         

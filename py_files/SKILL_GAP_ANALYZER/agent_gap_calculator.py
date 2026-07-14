@@ -46,13 +46,19 @@ class GapCalculatorAgent:
         unique_skills = []
         
         for skill in skills:
-            normalized = self.normalize_skill_name(skill['name'])
+            # Safe access to skill name with fallback
+            skill_name = skill.get('name') or skill.get('skill') or skill.get('title')
+            if not skill_name:
+                continue  # Skip invalid skill objects
+            skill['name'] = skill_name  # Ensure 'name' key exists
+            normalized = self.normalize_skill_name(skill_name)
             
             # If we haven't seen this skill, or if this one has higher proficiency
-            if normalized not in seen or skill['proficiency'] > seen[normalized]['proficiency']:
+            proficiency = skill.get('proficiency', 0)
+            if normalized not in seen or proficiency > seen[normalized].get('proficiency', 0):
                 if normalized in seen:
                     # Remove the old one
-                    unique_skills = [s for s in unique_skills if self.normalize_skill_name(s['name']) != normalized]
+                    unique_skills = [s for s in unique_skills if self.normalize_skill_name(s.get('name', s.get('skill', s.get('title', '')))) != normalized]
                 
                 seen[normalized] = skill
                 unique_skills.append(skill)
@@ -79,14 +85,18 @@ class GapCalculatorAgent:
         Example: If candidate has "Computer Vision", don't require "Object Detection"
         """
         filtered_required = []
-        candidate_skill_names = [s['name'] for s in candidate_skills]
+        candidate_skill_names = [s.get('name', s.get('skill', s.get('title', ''))) for s in candidate_skills]
         
         for req_skill in required_skills:
             is_covered = False
+            req_skill_name = req_skill.get('name', req_skill.get('skill', req_skill.get('title', '')))
+            if not req_skill_name:
+                continue
+            req_skill['name'] = req_skill_name
             
             # Check if any candidate skill is a parent of this required skill
             for cand_skill_name in candidate_skill_names:
-                if self.is_child_skill(req_skill['name'], cand_skill_name):
+                if self.is_child_skill(req_skill_name, cand_skill_name):
                     is_covered = True
                     break
             
@@ -106,8 +116,19 @@ class GapCalculatorAgent:
         required_skills = self.filter_redundant_skills(required_skills, candidate_skills)
         
         # Create skill name mappings for fuzzy matching
-        candidate_map = {self.normalize_skill_name(s['name']): s for s in candidate_skills}
-        required_map = {self.normalize_skill_name(s['name']): s for s in required_skills}
+        candidate_map = {}
+        for s in candidate_skills:
+            skill_name = s.get('name', s.get('skill', s.get('title', '')))
+            if skill_name:
+                s['name'] = skill_name
+                candidate_map[self.normalize_skill_name(skill_name)] = s
+        
+        required_map = {}
+        for s in required_skills:
+            skill_name = s.get('name', s.get('skill', s.get('title', '')))
+            if skill_name:
+                s['name'] = skill_name
+                required_map[self.normalize_skill_name(skill_name)] = s
         
         gaps = []
         strong_skills = []
@@ -137,51 +158,53 @@ class GapCalculatorAgent:
                         break
             
             if matched_cand_skill:
-                proficiency_gap = req_skill['proficiency'] - matched_cand_skill['proficiency']
+                req_proficiency = req_skill.get('proficiency', 0)
+                cand_proficiency = matched_cand_skill.get('proficiency', 0)
+                proficiency_gap = req_proficiency - cand_proficiency
                 
                 # Determine gap severity
                 if proficiency_gap <= 0:
                     # Candidate meets or exceeds requirement
-                    strong_skills.append(req_skill['name'])
+                    strong_skills.append(req_skill_name)
                 elif proficiency_gap <= 2:
                     # Minor gap
-                    weak_skills.append(req_skill['name'])
+                    weak_skills.append(req_skill_name)
                     gaps.append({
-                        'skill': req_skill['name'],
-                        'importance': req_skill['proficiency'],
-                        'current_proficiency': matched_cand_skill['proficiency'],
-                        'required_proficiency': req_skill['proficiency'],
+                        'skill': req_skill_name,
+                        'importance': req_proficiency,
+                        'current_proficiency': cand_proficiency,
+                        'required_proficiency': req_proficiency,
                         'gap_severity': 'low'
                     })
                     processed_gaps.add(skill_key)
                 elif proficiency_gap <= 4:
                     # Moderate gap
-                    weak_skills.append(req_skill['name'])
+                    weak_skills.append(req_skill_name)
                     gaps.append({
-                        'skill': req_skill['name'],
-                        'importance': req_skill['proficiency'],
-                        'current_proficiency': matched_cand_skill['proficiency'],
-                        'required_proficiency': req_skill['proficiency'],
+                        'skill': req_skill_name,
+                        'importance': req_proficiency,
+                        'current_proficiency': cand_proficiency,
+                        'required_proficiency': req_proficiency,
                         'gap_severity': 'medium'
                     })
                     processed_gaps.add(skill_key)
                 else:
                     # Major gap
-                    weak_skills.append(req_skill['name'])
+                    weak_skills.append(req_skill_name)
                     gaps.append({
-                        'skill': req_skill['name'],
-                        'importance': req_skill['proficiency'],
-                        'current_proficiency': matched_cand_skill['proficiency'],
-                        'required_proficiency': req_skill['proficiency'],
+                        'skill': req_skill_name,
+                        'importance': req_proficiency,
+                        'current_proficiency': cand_proficiency,
+                        'required_proficiency': req_proficiency,
                         'gap_severity': 'high'
                     })
                     processed_gaps.add(skill_key)
             else:
                 # Skill is completely missing
-                missing_skills.append(req_skill['name'])
+                missing_skills.append(req_skill_name)
                 gaps.append({
-                    'skill': req_skill['name'],
-                    'importance': req_skill['proficiency'],
+                    'skill': req_skill_name,
+                    'importance': req_skill.get('proficiency', 0),
                     'current_proficiency': 0.0,
                     'required_proficiency': req_skill['proficiency'],
                     'gap_severity': 'critical'
@@ -230,7 +253,7 @@ Enhance these gaps with importance and context.""")
         Main agent execution
         Calculates gaps between candidate and required skills
         """
-        print("\n📊 AGENT 2: Gap Calculator - Starting...")
+        print("\n[CHART] AGENT 2: Gap Calculator - Starting...")
         
         try:
             # Check if previous agent completed
@@ -240,15 +263,15 @@ Enhance these gaps with importance and context.""")
             candidate_skills = state["candidate_skills"]
             required_skills = state["required_skills"]
             
-            print(f"  → Raw input: {len(candidate_skills)} candidate skills, {len(required_skills)} required skills")
+            print(f"  [INPUT] Raw input: {len(candidate_skills)} candidate skills, {len(required_skills)} required skills")
             
             # Calculate gaps (with deduplication and filtering)
             gap_analysis = self.calculate_gaps(candidate_skills, required_skills)
             
-            print(f"  ✓ After deduplication: {len(gap_analysis['gaps'])} unique skill gaps")
-            print(f"  ✓ Strong skills: {len(gap_analysis['strong_skills'])}")
-            print(f"  ✓ Weak skills: {len(gap_analysis['weak_skills'])}")
-            print(f"  ✓ Missing skills: {len(gap_analysis['missing_skills'])}")
+            print(f"  [SUCCESS] After deduplication: {len(gap_analysis['gaps'])} unique skill gaps")
+            print(f"  [SUCCESS] Strong skills: {len(gap_analysis['strong_skills'])}")
+            print(f"  [SUCCESS] Weak skills: {len(gap_analysis['weak_skills'])}")
+            print(f"  [SUCCESS] Missing skills: {len(gap_analysis['missing_skills'])}")
             
             # Update state
             state["skill_gaps"] = gap_analysis['gaps']
@@ -260,10 +283,10 @@ Enhance these gaps with importance and context.""")
             # Print critical gaps
             critical_gaps = [g for g in gap_analysis['gaps'] if g['gap_severity'] == 'critical']
             if critical_gaps:
-                print(f"  ⚠️  Critical gaps: {[g['skill'] for g in critical_gaps[:5]]}")
+                print(f"  [WARNING] Critical gaps: {[g.get('skill', 'unknown') for g in critical_gaps[:5]]}")
             
         except Exception as e:
-            print(f"  ✗ Error in Gap Calculator: {str(e)}")
+            print(f"  [ERROR] Error in Gap Calculator: {str(e)}")
             state["gap_analysis_status"] = "failed"
             state["errors"] = state.get("errors", []) + [f"GapCalculator: {str(e)}"]
         

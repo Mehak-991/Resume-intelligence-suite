@@ -95,30 +95,30 @@ def print_summary(state: AgentState):
     """Print summary of the analysis"""
     
     print("\n" + "="*80)
-    print("📊 SKILL GAP ANALYSIS SUMMARY")
+    print("[CHART] SKILL GAP ANALYSIS SUMMARY")
     print("="*80)
     
-    print(f"\n✅ Strong Skills ({len(state.get('strong_skills', []))}):")
+    print(f"\n[SUCCESS] Strong Skills ({len(state.get('strong_skills', []))}):")
     for skill in state.get('strong_skills', [])[:5]:
         print(f"   • {skill}")
     
-    print(f"\n⚠️  Weak Skills ({len(state.get('weak_skills', []))}):")
+    print(f"\n[WARNING] Weak Skills ({len(state.get('weak_skills', []))}):")
     for skill in state.get('weak_skills', [])[:5]:
         print(f"   • {skill}")
     
-    print(f"\n❌ Missing Skills ({len(state.get('missing_skills', []))}):")
+    print(f"\n[ERROR] Missing Skills ({len(state.get('missing_skills', []))}):")
     for skill in state.get('missing_skills', [])[:5]:
         print(f"   • {skill}")
     
-    print(f"\n📚 Course Recommendations: {len(state.get('course_recommendations', []))}")
-    print(f"⏱️  Total Learning Time: {state.get('total_learning_time', 0):.1f} hours")
+    print(f"\n[BOOK] Course Recommendations: {len(state.get('course_recommendations', []))}")
+    print(f"[TIME] Total Learning Time: {state.get('total_learning_time', 0):.1f} hours")
     
-    print(f"\n📈 Visualizations Generated:")
+    print(f"\n[CHART] Visualizations Generated:")
     for path in state.get('visualization_paths', []):
         print(f"   • {path}")
     
     if state.get('errors'):
-        print(f"\n⚠️  Errors encountered:")
+        print(f"\n[WARNING] Errors encountered:")
         for error in state['errors']:
             print(f"   • {error}")
     

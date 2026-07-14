@@ -16,6 +16,10 @@ from datetime import datetime
 from pathlib import Path
 import sys
 
+# Configure UTF-8 encoding to prevent Unicode errors
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
+
 # Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

@@ -60,11 +60,11 @@ class AIMockInterviewSystem:
             max_answer_duration: Maximum duration for each answer in seconds
         """
         if not hasattr(self, 'questions'):
-            print("❌ Please run setup_interview() first!")
+            print("[ERROR] Please run setup_interview() first!")
             return
         
         print("\n" + "="*60)
-        print("🎙️ STARTING AI MOCK INTERVIEW")
+        print("[MICROPHONE] STARTING AI MOCK INTERVIEW")
         print("="*60)
         
         # Introduction
@@ -85,10 +85,10 @@ class AIMockInterviewSystem:
             self.tts.speak(f"Question {i}. {question}")
             
             # Give candidate time to think
-            print("\n⏳ You have a moment to think...")
+            print("\n[TIME] You have a moment to think...")
             time.sleep(3)
             
-            print("🎤 Please start speaking your answer...")
+            print("[MICROPHONE] Please start speaking your answer...")
             time.sleep(1)
             
             # Record answer
@@ -101,21 +101,21 @@ class AIMockInterviewSystem:
             duration = end_time - start_time
             
             if not audio_file:
-                print("⚠️ No audio recorded, skipping...")
+                print("[WARNING] No audio recorded, skipping...")
                 continue
             
             # Transcribe answer
-            print("\n🔄 Transcribing your answer...")
+            print("\n[TRANSCRIBING] Transcribing your answer...")
             answer_text = self.stt.transcribe(audio_file)
             
             if not answer_text:
-                print("⚠️ Could not transcribe answer, skipping...")
+                print("[WARNING] Could not transcribe answer, skipping...")
                 continue
             
-            print(f"\n📝 Your answer: {answer_text}")
+            print(f"\n[NOTES] Your answer: {answer_text}")
             
             # Analyze answer
-            print("\n🤔 Analyzing your response...")
+            print("\n[ANALYZING] Analyzing your response...")
             analysis = self.agent.analyze_answer(
                 question=question,
                 answer=answer_text,
@@ -139,8 +139,8 @@ class AIMockInterviewSystem:
             })
             
             # Provide brief feedback
-            print(f"\n💡 Quick feedback: {analysis.get('feedback', 'Good answer')}")
-            print(f"📊 Score: {analysis.get('overall_score', 0)}/100")
+            print(f"\n[FEEDBACK] Quick feedback: {analysis.get('feedback', 'Good answer')}")
+            print(f"[SCORE] Score: {analysis.get('overall_score', 0)}/100")
             
             # Clean up audio file
             try:
@@ -153,11 +153,11 @@ class AIMockInterviewSystem:
                 time.sleep(2)
         
         print("\n" + "="*60)
-        print("✅ INTERVIEW COMPLETED!")
+        print("[SUCCESS] INTERVIEW COMPLETED!")
         print("="*60)
         
         # Generate final report
-        print("\n📊 Generating your comprehensive feedback report...\n")
+        print("\n[REPORT] Generating your comprehensive feedback report...\n")
         self.final_report = self.feedback_gen.generate_final_report(self.interview_data)
         
         return self.final_report
@@ -167,7 +167,7 @@ class AIMockInterviewSystem:
         if hasattr(self, 'final_report'):
             return self.final_report
         else:
-            print("⚠️ No interview conducted yet!")
+            print("[WARNING] No interview conducted yet!")
             return None
     
     def print_report(self):
@@ -175,14 +175,14 @@ class AIMockInterviewSystem:
         if hasattr(self, 'final_report'):
             self.feedback_gen.print_report(self.final_report)
         else:
-            print("⚠️ No interview conducted yet!")
+            print("[WARNING] No interview conducted yet!")
     
     def save_report(self, filename='interview_report.json'):
         """Save the final report to file"""
         if hasattr(self, 'final_report'):
             self.feedback_gen.save_report(self.final_report, filename)
         else:
-            print("⚠️ No interview conducted yet!")
+            print("[WARNING] No interview conducted yet!")
 
 
 def main():
@@ -200,7 +200,7 @@ def main():
     system = AIMockInterviewSystem()
     
     # Get resume and JD paths
-    print("📄 Please provide the following information:\n")
+    print("[DOCUMENT] Please provide the following information:\n")
     
     resume_path = input("Enter path to resume (PDF/DOCX/TXT): ").strip()
     jd_path = input("Enter path to job description (PDF/DOCX/TXT): ").strip()
@@ -211,19 +211,19 @@ def main():
     
     # Setup the interview
     if not system.setup_interview(resume_path, jd_path, candidate_name, position):
-        print("\n❌ Failed to setup interview. Please check your files and try again.")
+        print("\n[ERROR] Failed to setup interview. Please check your files and try again.")
         return
     
     print("\n" + "-"*60)
-    print("\n✅ Interview setup complete!")
+    print("\n[SUCCESS] Interview setup complete!")
     
     # Preview questions
-    print("\n📋 Interview will include:")
+    print("\n[LIST] Interview will include:")
     print(f"   - {sum(1 for q in system.questions if q['difficulty'] == 'easy')} Easy questions")
     print(f"   - {sum(1 for q in system.questions if q['difficulty'] == 'medium')} Medium questions")
     print(f"   - {sum(1 for q in system.questions if q['difficulty'] == 'hard')} Hard questions")
     
-    input("\n✨ Press ENTER to start the interview...")
+    input("\n[READY] Press ENTER to start the interview...")
     
     # Conduct the interview
     report = system.conduct_interview(max_answer_duration=60)
@@ -237,12 +237,12 @@ def main():
         system.save_report(report_filename)
         
         print("\n" + "="*60)
-        print("🎉 Thank you for completing the mock interview!")
-        print("📊 Your detailed report has been saved.")
-        print("💡 Review the feedback and practice recommendations.")
+        print("[THANK YOU] Thank you for completing the mock interview!")
+        print("[REPORT] Your detailed report has been saved.")
+        print("[TIP] Review the feedback and practice recommendations.")
         print("="*60 + "\n")
     else:
-        print("\n❌ Interview was not completed successfully.")
+        print("\n[ERROR] Interview was not completed successfully.")
 
 
 if __name__ == "__main__":

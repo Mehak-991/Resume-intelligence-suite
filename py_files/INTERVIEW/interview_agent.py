@@ -90,7 +90,7 @@ Return ONLY a JSON object with this format:
             return analysis
             
         except Exception as e:
-            print(f"❌ Answer analysis error: {e}")
+            print(f"[ERROR] Answer analysis error: {e}")
             return self._get_fallback_analysis()
     
     def _get_fallback_analysis(self):
@@ -188,7 +188,7 @@ Return ONLY the follow-up question, nothing else."""
             return follow_up
             
         except Exception as e:
-            print(f"❌ Follow-up generation error: {e}")
+            print(f"[ERROR] Follow-up generation error: {e}")
             return "Could you elaborate more on that point?"
 
 

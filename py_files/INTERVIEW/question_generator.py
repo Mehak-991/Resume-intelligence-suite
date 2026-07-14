@@ -84,21 +84,21 @@ Do not include any explanation, just the JSON array."""
             
             # Validate we have exactly 10 questions
             if len(questions) != 10:
-                print(f"⚠️ Expected 10 questions, got {len(questions)}, using fallback")
+                print(f"[WARNING] Expected 10 questions, got {len(questions)}, using fallback")
                 return self._get_fallback_questions()
             
             # Validate structure
             for q in questions:
                 if 'difficulty' not in q or 'question' not in q:
-                    print(f"⚠️ Invalid question structure, using fallback")
+                    print(f"[WARNING] Invalid question structure, using fallback")
                     return self._get_fallback_questions()
             
-            print("✅ Successfully generated 10 interview questions")
+            print("[SUCCESS] Successfully generated 10 interview questions")
             return questions
             
         except Exception as e:
-            print(f"❌ Question generation error: {e}")
-            print("📝 Using fallback questions")
+            print(f"[ERROR] Question generation error: {e}")
+            print("[FALLBACK] Using fallback questions")
             return self._get_fallback_questions()
     
     def _get_fallback_questions(self):
@@ -128,6 +128,6 @@ if __name__ == "__main__":
     print("\nGenerating questions...")
     questions = generator.generate_questions(sample_resume, sample_jd)
     
-    print(f"\n✅ Generated {len(questions)} questions:\n")
+    print(f"\n[SUCCESS] Generated {len(questions)} questions:\n")
     for i, q in enumerate(questions, 1):
         print(f"{i}. [{q['difficulty'].upper()}] {q['question']}")

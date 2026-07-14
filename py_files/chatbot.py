@@ -81,6 +81,7 @@ class SimpleVectorStore:
 
     def similarity_search(self, query: str, k: int = 5) -> List[Document]:
         if not self.documents:
+            print("[WARNING] No documents in vector store")
             return []
         query_tokens = tokenize(query)
         query_vec = self._tfidf(query_tokens)
@@ -89,7 +90,9 @@ class SimpleVectorStore:
             for i, vec in enumerate(self.tfidf_vectors)
         ]
         scores.sort(reverse=True)
-        return [self.documents[i] for _, i in scores[:k]]
+        results = [self.documents[i] for _, i in scores[:k]]
+        print(f"[RETRIEVAL] Query: '{query}' -> Retrieved {len(results)} chunks with scores: {[s[0] for s in scores[:k]]}")
+        return results
 
     def is_empty(self) -> bool:
         return len(self.documents) == 0
@@ -113,9 +116,9 @@ class EnhancedRAGPipeline:
         self.vector_store = SimpleVectorStore()
         self.chat_history: List[Union[HumanMessage, AIMessage]] = []
 
-        # Initialize Groq LLM
+        # Initialize Groq LLM with correct model name
         self.llm = ChatGroq(
-            model_name="openai/gpt-oss-20b",
+            model="llama-3.3-70b-versatile",
             temperature=0.2
         )
         print("RAG Pipeline initialized (TF-IDF mode — no model download needed)!")
@@ -154,7 +157,7 @@ class EnhancedRAGPipeline:
                     continue
                 chunks = self.chunk_text(text)
                 all_chunks.extend(chunks)
-                print(f"  → {len(chunks)} chunks from {Path(file_path).name}")
+                print(f"  [SUCCESS] {len(chunks)} chunks from {Path(file_path).name}")
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
                 continue
@@ -162,20 +165,36 @@ class EnhancedRAGPipeline:
         if all_chunks:
             documents = [Document(page_content=chunk) for chunk in all_chunks]
             self.vector_store.add_documents(documents)
-            print(f"Total chunks in store: {len(self.vector_store.documents)}")
+            print(f"[SUCCESS] Total chunks in store: {len(self.vector_store.documents)}")
+        else:
+            print("[WARNING] No chunks generated from files")
 
         return len(all_chunks)
 
     def ask(self, question: str) -> dict:
+        print(f"[QUERY] Received question: '{question}'")
+        print(f"[QUERY] Total documents in store: {len(self.vector_store.documents)}")
+        
         if self.vector_store.is_empty():
+            print("[ERROR] No documents loaded")
             return {
                 "answer": "No documents loaded. Please upload PDF or TXT files first.",
                 "source_documents": []
             }
 
-        # Retrieve top relevant chunks
-        docs = self.vector_store.similarity_search(question, k=5)
+        # Retrieve top relevant chunks (increased from 5 to 10 for better context)
+        docs = self.vector_store.similarity_search(question, k=10)
+        
+        if not docs:
+            print("[WARNING] No documents retrieved from similarity search")
+            return {
+                "answer": "No relevant information found in the uploaded documents. Please try rephrasing your question.",
+                "source_documents": []
+            }
+        
         context = "\n\n".join(doc.page_content for doc in docs)
+        print(f"[CONTEXT] Built context with {len(docs)} chunks, total length: {len(context)} characters")
+        print(f"[CONTEXT] First chunk preview: {docs[0].page_content[:200]}...")
 
         # Build conversation history text (last 4 messages)
         history_text = ""
@@ -191,7 +210,9 @@ class EnhancedRAGPipeline:
 
 Instructions:
 - Use the context and conversation history to construct your answer.
-- If the context is insufficient, say "The provided context does not contain enough information".
+- The context contains relevant information from uploaded documents. Use it to answer the question.
+- If you can find relevant information in the context, use it to provide a detailed answer.
+- Only say "The provided context does not contain enough information" if the context is completely empty or irrelevant.
 - Be concise, factual, and avoid speculation.
 - Reference previous parts of the conversation when relevant.
 - Format your answer as readable text with short paragraphs and bullet lists where helpful.
@@ -199,7 +220,7 @@ Instructions:
 Chat History:
 {chat_history}
 
-Context:
+Context from documents:
 {context}
 
 Question:
@@ -208,12 +229,14 @@ Question:
 Answer:"""
         )
 
+        print(f"[LLM] Invoking LLM with context length: {len(context)} characters")
         chain = prompt | self.llm | StrOutputParser()
         answer = chain.invoke({
             "context": context,
             "chat_history": history_text,
             "question": question
         })
+        print(f"[LLM] Received answer with length: {len(answer)} characters")
 
         self.chat_history.append(HumanMessage(content=question))
         self.chat_history.append(AIMessage(content=answer))

@@ -270,7 +270,7 @@ class FeedbackGenerator:
         """Save report to JSON file"""
         with open(filename, 'w') as f:
             json.dump(report, f, indent=2)
-        print(f"✅ Report saved to {filename}")
+        print(f"[SUCCESS] Report saved to {filename}")
     
     def print_report(self, report):
         """Print formatted report to console"""
@@ -306,7 +306,7 @@ class FeedbackGenerator:
         
         # Strengths
         print("\n" + "-"*60)
-        print("✅ STRENGTHS:")
+        print("[SUCCESS] STRENGTHS:")
         print("-"*60)
         for i, strength in enumerate(report.get('strengths', []), 1):
             print(f"{i}. {strength}")
@@ -320,7 +320,7 @@ class FeedbackGenerator:
         
         # Practice recommendations
         print("\n" + "-"*60)
-        print("💡 PRACTICE RECOMMENDATIONS:")
+        print("[TIP] PRACTICE RECOMMENDATIONS:")
         print("-"*60)
         for i, rec in enumerate(report.get('practice_recommendations', []), 1):
             print(f"{i}. {rec}")

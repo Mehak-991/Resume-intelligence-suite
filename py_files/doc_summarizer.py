@@ -6,6 +6,8 @@ import fitz  # PyMuPDF
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
 
 # ---------------------------------------------------------
 # 1. Load environment + initialize Groq LLM
@@ -14,7 +16,8 @@ from langchain_groq import ChatGroq
 load_dotenv()
 
 qlm = ChatGroq(
-    model_name="openai/gpt-oss-20b"
+    model="llama-3.3-70b-versatile",
+    temperature=0.3
 )
 
 # ---------------------------------------------------------
@@ -27,7 +30,7 @@ def extract_text_from_url(url: str) -> str:
                       "AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/120.0.0.0 Safari/537.36"
     }
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=30)
     response.raise_for_status()
     
     soup = BeautifulSoup(response.text, "html.parser")
@@ -89,8 +92,8 @@ Respond ONLY with JSON.
 # 4. Chunking text
 # ---------------------------------------------------------
 
-def chunk_text(text: str, max_chars=3500, overlap_chars=250):
-    """Split long text into overlapping chunks for LLM."""
+def chunk_text(text: str, max_chars=5000, overlap_chars=300):
+    """Split long text into overlapping chunks for LLM. Increased chunk size to reduce API calls."""
     if not text:
         return []
 
@@ -212,15 +215,37 @@ Only return JSON.
 # 7. Top-level function to summarize any text document
 # ---------------------------------------------------------
 
-def summarize_text_document(full_text: str):
+def summarize_text_document(full_text: str, max_workers=4):
+    """Summarize document with parallel chunk processing for faster execution."""
     chunks = chunk_text(full_text)
+    print(f"[INFO] Document split into {len(chunks)} chunks for parallel processing")
+    
     chunk_results = []
-
-    for i, ch in enumerate(chunks):
-        print(f"Summarizing chunk {i+1}/{len(chunks)} (len={len(ch)})...")
-        chunk_summary = summarize_chunk_with_prompt(ch)
-        chunk_results.append(chunk_summary)
-
+    
+    # Process chunks in parallel using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all chunk summarization tasks
+        future_to_chunk = {
+            executor.submit(summarize_chunk_with_prompt, chunk): (i, chunk)
+            for i, chunk in enumerate(chunks)
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_chunk):
+            chunk_idx, chunk_text = future_to_chunk[future]
+            try:
+                result = future.result()
+                chunk_results.append((chunk_idx, result))
+                print(f"[PROGRESS] Completed chunk {chunk_idx + 1}/{len(chunks)}")
+            except Exception as e:
+                print(f"[ERROR] Chunk {chunk_idx + 1} failed: {e}")
+                chunk_results.append((chunk_idx, {"error": str(e)}))
+    
+    # Sort results by original chunk order
+    chunk_results.sort(key=lambda x: x[0])
+    chunk_results = [result for _, result in chunk_results]
+    
+    print(f"[INFO] Aggregating {len(chunk_results)} chunk summaries...")
     final_summary = aggregate_chunk_summaries(chunk_results)
 
     return {
@@ -257,20 +282,51 @@ def home():
 @app.post("/summarize/url")
 async def summarize_url(url: str = Form(...)):
     """Summarize a webpage from URL."""
-    text = extract_text_from_url(url)
-    result = summarize_text_document(text)
-    return result
+    try:
+        print(f"[INFO] Starting URL summarization for: {url}")
+        text = extract_text_from_url(url)
+        print(f"[INFO] Extracted {len(text)} characters from URL")
+        result = summarize_text_document(text, max_workers=4)
+        print(f"[INFO] Summarization complete")
+        return result
+    except requests.Timeout:
+        return {"error": "URL extraction timed out. Please try again."}
+    except Exception as e:
+        print(f"[ERROR] URL summarization failed: {e}")
+        return {"error": str(e)}
 
 @app.post("/summarize/pdf")
 async def summarize_pdf(file: UploadFile = File(...)):
     """Summarize an uploaded PDF file."""
-    file_path = "uploaded.pdf"
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
-
-    text = extract_text_from_pdf(file_path)
-    result = summarize_text_document(text)
-    return result
+    import tempfile
+    import os
+    
+    try:
+        print(f"[INFO] Starting PDF summarization for: {file.filename}")
+        
+        # Use tempfile for better file handling
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(await file.read())
+            tmp_path = tmp_file.name
+        
+        try:
+            text = extract_text_from_pdf(tmp_path)
+            print(f"[INFO] Extracted {len(text)} characters from PDF")
+            
+            if len(text) < 100:
+                return {"error": "PDF appears to be empty or contains only images. Please try a text-based PDF."}
+            
+            result = summarize_text_document(text, max_workers=4)
+            print(f"[INFO] Summarization complete")
+            return result
+        finally:
+            # Clean up temp file
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+                
+    except Exception as e:
+        print(f"[ERROR] PDF summarization failed: {e}")
+        return {"error": str(e)}
 
 # ---------------------------------------------------------
 # Run command:
