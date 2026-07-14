@@ -7,7 +7,7 @@ Estimates learning time and creates learning roadmap
 import os
 from typing import List, Dict
 from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage
 from state import AgentState, CourseRecommendation
 import json
 
@@ -65,32 +65,29 @@ class CourseRecommenderAgent:
                 "recommended_difficulty": level
             })
             
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert online learning advisor.
-For each given skill and level, recommend 2-3 high-quality FREE courses.
-
-Focus on:
-- Coursera, edX, freeCodeCamp, YouTube playlists, Udacity free tier
-- Official documentation and tutorials
-- Reputable platforms with certificates
-
-Return ONLY valid JSON array with this exact structure, containing NO markdown backticks or explanations:
-[
-  {{
-    "skill": "Python",
-    "course_title": "Python for Everybody",
-    "platform": "Coursera",
-    "url": "https://www.coursera.org/specializations/python",
-    "duration_hours": 35,
-    "level": "beginner",
-    "is_free": true
-  }}
-]"""),
-            ("user", f"Find FREE courses for the following skills:\n{json.dumps(formatted_skills, indent=2)}")
-        ])
+        # Use direct messages — NOT ChatPromptTemplate — because json.dumps() output
+        # contains braces that str.format() would interpret as template variables.
+        system_content = (
+            "You are an expert online learning advisor.\n"
+            "For each given skill and level, recommend 2-3 high-quality FREE courses.\n\n"
+            "Focus on:\n"
+            "- Coursera, edX, freeCodeCamp, YouTube playlists, Udacity free tier\n"
+            "- Official documentation and tutorials\n"
+            "- Reputable platforms with certificates\n\n"
+            "Return ONLY valid JSON array with this exact structure, containing NO markdown backticks or explanations:\n"
+            '[\n  {\n    "skill": "Python",\n    "course_title": "Python for Everybody",\n'
+            '    "platform": "Coursera",\n    "url": "https://www.coursera.org/specializations/python",\n'
+            '    "duration_hours": 35,\n    "level": "beginner",\n    "is_free": true\n  }\n]'
+        )
+        user_content = f"Find FREE courses for the following skills:\n{json.dumps(formatted_skills, indent=2)}"
+        
+        messages = [
+            SystemMessage(content=system_content),
+            HumanMessage(content=user_content),
+        ]
         
         try:
-            response = self.llm.invoke(prompt.format_messages())
+            response = self.llm.invoke(messages)
             content = response.content.strip()
             
             # Parse JSON response

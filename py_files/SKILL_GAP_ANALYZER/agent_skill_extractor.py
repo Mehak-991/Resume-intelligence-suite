@@ -6,7 +6,7 @@ Uses Groq LLM to extract skills from resume and job description
 import os
 from typing import List, Dict
 from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage
 from state import AgentState, SkillItem
 import json
 import time
@@ -39,8 +39,12 @@ class SkillExtractorAgent:
         - Dict arrays with 'name': [{"name": "Python"}]
         - Dict arrays with 'skill': [{"skill": "Python"}]
         - Dict arrays with 'title': [{"title": "Python"}]
+        - Dictionaries containing list under a key: {"skills": [...]}
         """
-        print(f"  [RAW LLM RESPONSE] {raw_response[:500]}...")
+        print(f"  [RAW LLM RESPONSE]\n{raw_response}\n")
+        
+        raw_response = raw_response.strip()
+        data = None
         
         try:
             # Try direct JSON parse
@@ -53,21 +57,48 @@ class SkillExtractorAgent:
                 try:
                     data = json.loads(json_match.group())
                 except json.JSONDecodeError:
-                    print(f"  [ERROR] Could not parse JSON from response")
-                    return []
-            else:
-                print(f"  [ERROR] No JSON array found in response")
-                return []
+                    pass
+            
+            if data is None:
+                json_dict_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
+                if json_dict_match:
+                    try:
+                        data = json.loads(json_dict_match.group())
+                    except json.JSONDecodeError:
+                        pass
         
-        if not isinstance(data, list):
-            print(f"  [ERROR] Response is not a list, got: {type(data)}")
+        if data is None:
+            print(f"  [ERROR] Could not parse JSON from response")
             return []
-        
+            
+        # If it's a dictionary, look for lists inside it
+        if isinstance(data, dict):
+            list_keys = ["skills", "candidate_skills", "required_skills", "data", "list", "skills_list"]
+            found_list = None
+            for key in list_keys:
+                if key in data and isinstance(data[key], list):
+                    found_list = data[key]
+                    break
+            
+            if found_list is not None:
+                data = found_list
+            else:
+                # If no list found, but it looks like a single skill dict, wrap in list
+                skill_name = data.get('name') or data.get('skill') or data.get('title')
+                if skill_name:
+                    data = [data]
+                else:
+                    print(f"  [ERROR] Dict response does not contain any known list of skills: {data}")
+                    return []
+                    
+        if not isinstance(data, list):
+            print(f"  [ERROR] Response data is not a list, got: {type(data)}")
+            return []
+            
         normalized_skills = []
-        
         for item in data:
             try:
-                # Handle string format
+                # Handle string format (e.g. "Python")
                 if isinstance(item, str):
                     normalized_skills.append({
                         "name": item.strip(),
@@ -76,7 +107,7 @@ class SkillExtractorAgent:
                     })
                 # Handle dict format
                 elif isinstance(item, dict):
-                    # Try multiple possible keys for skill name
+                    # Safe validation of name/skill/title/technology/tool
                     skill_name = (
                         item.get('name') or 
                         item.get('skill') or 
@@ -86,34 +117,50 @@ class SkillExtractorAgent:
                         ""
                     )
                     
-                    if not skill_name:
-                        print(f"  [WARNING] Skipping item with no skill name: {item}")
-                        continue
+                    if not skill_name or not isinstance(skill_name, str):
+                        if skill_name:
+                            skill_name = str(skill_name)
+                        else:
+                            print(f"  [WARNING] Skipping item with no skill name: {item}")
+                            continue
                     
                     # Get proficiency with fallback
-                    proficiency = item.get('proficiency', item.get('level', 5.0))
+                    proficiency = item.get('proficiency')
+                    if proficiency is None:
+                        proficiency = item.get('level')
+                    if proficiency is None:
+                        proficiency = item.get('score')
+                    if proficiency is None:
+                        proficiency = 5.0
+                        
                     if isinstance(proficiency, str):
-                        # Try to parse string proficiency
                         try:
+                            if '/' in proficiency:
+                                proficiency = proficiency.split('/')[0]
                             proficiency = float(proficiency)
                         except:
                             proficiency = 5.0
-                    proficiency = min(max(float(proficiency), 0), 10)  # Clamp to 0-10
+                    elif not isinstance(proficiency, (int, float)):
+                        proficiency = 5.0
+                        
+                    proficiency = min(max(float(proficiency), 0.0), 10.0)  # Clamp to 0-10
                     
                     # Get category with fallback
-                    category = item.get('category', item.get('type', 'general'))
+                    category = item.get('category') or item.get('type') or 'general'
+                    if not isinstance(category, str):
+                        category = str(category)
                     
                     normalized_skills.append({
                         "name": skill_name.strip(),
                         "proficiency": proficiency,
-                        "category": category
+                        "category": category.strip()
                     })
                 else:
                     print(f"  [WARNING] Skipping non-string/dict item: {type(item)}")
             except Exception as e:
                 print(f"  [WARNING] Error normalizing item {item}: {str(e)}")
                 continue
-        
+                
         print(f"  [NORMALIZATION] Normalized {len(normalized_skills)} skills from {len(data)} raw items")
         return normalized_skills
     
@@ -123,41 +170,37 @@ class SkillExtractorAgent:
         print(f"  [INPUT] Text length: {len(text)} characters")
         print(f"  [INPUT] Context: {context}")
         
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert technical recruiter and skill analyzer.
-Extract ALL technical skills from the provided text and rate them on a 0-10 proficiency scale.
-
-For each skill, provide:
-1. Skill name (standardized, e.g., "Python" not "python programming")
-2. Proficiency score (0-10, based on context clues like years of experience, project complexity)
-3. Category (programming, cloud, database, devops, frontend, backend, ml, etc.)
-
-Return ONLY valid JSON array format:
-[
-  {"name": "Python", "proficiency": 8.5, "category": "programming"},
-  {"name": "Kubernetes", "proficiency": 6.0, "category": "devops"}
-]
-
-Alternative formats also accepted:
-- Simple array: ["Python", "SQL", "FastAPI"]
-- Different keys: [{"skill": "Python"}, {"title": "SQL"}]
-
-Be comprehensive but accurate. Include:
-- Programming languages
-- Frameworks and libraries
-- Cloud platforms
-- Databases
-- DevOps tools
-- Soft skills (leadership, communication, etc.)
-- Domain knowledge
-"""),
-            ("user", f"Context: {context}\n\nText to analyze:\n{text}")
-        ])
+        # IMPORTANT: Use HumanMessage/SystemMessage directly instead of ChatPromptTemplate.
+        # ChatPromptTemplate uses Python str.format() internally, which crashes when
+        # the resume/JD text contains JSON braces like {"name": "Python"} — these are
+        # misinterpreted as template variables, causing KeyError: '"name"'.
+        system_content = (
+            "You are an expert technical recruiter and skill analyzer.\n"
+            "Extract ALL technical skills from the provided text and rate them on a 0-10 proficiency scale.\n\n"
+            "For each skill, provide:\n"
+            "1. Skill name (standardized, e.g., Python not python programming)\n"
+            "2. Proficiency score (0-10, based on context clues like years of experience, project complexity)\n"
+            "3. Category (programming, cloud, database, devops, frontend, backend, ml, etc.)\n\n"
+            "Return ONLY valid JSON array format:\n"
+            '[\n  {"name": "Python", "proficiency": 8.5, "category": "programming"},\n'
+            '  {"name": "Kubernetes", "proficiency": 6.0, "category": "devops"}\n]\n\n'
+            "Alternative formats also accepted:\n"
+            "- Simple array: [\"Python\", \"SQL\", \"FastAPI\"]\n"
+            "- Different keys: [{\"skill\": \"Python\"}, {\"title\": \"SQL\"}]\n\n"
+            "Be comprehensive but accurate. Include programming languages, frameworks, "
+            "cloud platforms, databases, DevOps tools, soft skills, and domain knowledge."
+        )
+        user_content = f"Context: {context}\n\nText to analyze:\n{text}"
+        
+        messages = [
+            SystemMessage(content=system_content),
+            HumanMessage(content=user_content),
+        ]
         
         for attempt in range(max_retries):
             try:
                 print(f"  [LLM CALL] Attempt {attempt + 1}/{max_retries}")
-                response = self.llm.invoke(prompt.format_messages())
+                response = self.llm.invoke(messages)
                 
                 # Normalize the response
                 normalized_skills = self.normalize_skill_response(response.content)

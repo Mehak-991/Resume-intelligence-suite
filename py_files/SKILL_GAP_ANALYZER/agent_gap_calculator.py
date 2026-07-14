@@ -7,7 +7,7 @@ Calculates proficiency gaps and categorizes them by severity
 import os
 from typing import List, Dict
 from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage
 from state import AgentState, SkillGap
 import json
 
@@ -96,7 +96,7 @@ class GapCalculatorAgent:
             
             # Check if any candidate skill is a parent of this required skill
             for cand_skill_name in candidate_skill_names:
-                if self.is_child_skill(req_skill_name, cand_skill_name):
+                if cand_skill_name and self.is_child_skill(req_skill_name, cand_skill_name):
                     is_covered = True
                     break
             
@@ -157,56 +157,59 @@ class GapCalculatorAgent:
                         matched_cand_skill = cand_skill
                         break
             
+            req_skill_actual_name = req_skill.get('name') or req_skill.get('skill') or req_skill.get('title') or req_skill_name
+            
             if matched_cand_skill:
-                req_proficiency = req_skill.get('proficiency', 0)
-                cand_proficiency = matched_cand_skill.get('proficiency', 0)
-                proficiency_gap = req_proficiency - cand_proficiency
+                req_proficiency = req_skill.get('proficiency', req_skill.get('level', 5.0))
+                cand_proficiency = matched_cand_skill.get('proficiency', matched_cand_skill.get('level', 5.0))
+                proficiency_gap = float(req_proficiency) - float(cand_proficiency)
                 
                 # Determine gap severity
                 if proficiency_gap <= 0:
                     # Candidate meets or exceeds requirement
-                    strong_skills.append(req_skill_name)
+                    strong_skills.append(req_skill_actual_name)
                 elif proficiency_gap <= 2:
                     # Minor gap
-                    weak_skills.append(req_skill_name)
+                    weak_skills.append(req_skill_actual_name)
                     gaps.append({
-                        'skill': req_skill_name,
-                        'importance': req_proficiency,
-                        'current_proficiency': cand_proficiency,
-                        'required_proficiency': req_proficiency,
+                        'skill': req_skill_actual_name,
+                        'importance': float(req_proficiency),
+                        'current_proficiency': float(cand_proficiency),
+                        'required_proficiency': float(req_proficiency),
                         'gap_severity': 'low'
                     })
                     processed_gaps.add(skill_key)
                 elif proficiency_gap <= 4:
                     # Moderate gap
-                    weak_skills.append(req_skill_name)
+                    weak_skills.append(req_skill_actual_name)
                     gaps.append({
-                        'skill': req_skill_name,
-                        'importance': req_proficiency,
-                        'current_proficiency': cand_proficiency,
-                        'required_proficiency': req_proficiency,
+                        'skill': req_skill_actual_name,
+                        'importance': float(req_proficiency),
+                        'current_proficiency': float(cand_proficiency),
+                        'required_proficiency': float(req_proficiency),
                         'gap_severity': 'medium'
                     })
                     processed_gaps.add(skill_key)
                 else:
                     # Major gap
-                    weak_skills.append(req_skill_name)
+                    weak_skills.append(req_skill_actual_name)
                     gaps.append({
-                        'skill': req_skill_name,
-                        'importance': req_proficiency,
-                        'current_proficiency': cand_proficiency,
-                        'required_proficiency': req_proficiency,
+                        'skill': req_skill_actual_name,
+                        'importance': float(req_proficiency),
+                        'current_proficiency': float(cand_proficiency),
+                        'required_proficiency': float(req_proficiency),
                         'gap_severity': 'high'
                     })
                     processed_gaps.add(skill_key)
             else:
                 # Skill is completely missing
-                missing_skills.append(req_skill_name)
+                missing_skills.append(req_skill_actual_name)
+                req_proficiency = req_skill.get('proficiency', req_skill.get('level', 5.0))
                 gaps.append({
-                    'skill': req_skill_name,
-                    'importance': req_skill.get('proficiency', 0),
+                    'skill': req_skill_actual_name,
+                    'importance': float(req_proficiency),
                     'current_proficiency': 0.0,
-                    'required_proficiency': req_skill['proficiency'],
+                    'required_proficiency': float(req_proficiency),
                     'gap_severity': 'critical'
                 })
                 processed_gaps.add(skill_key)
@@ -226,27 +229,65 @@ class GapCalculatorAgent:
     def enhance_gap_analysis(self, gaps: List[Dict], resume_text: str, job_text: str) -> List[Dict]:
         """Use LLM to enhance gap analysis with context"""
         
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert career coach analyzing skill gaps.
-Given the identified gaps, provide enhanced analysis with:
-1. Importance ranking (0-10) based on job requirements
-2. Learning difficulty assessment
-3. Transferable skills the candidate might leverage
-
-Return the enhanced gaps as JSON array with the same structure plus your insights."""),
-            ("user", f"""Resume: {resume_text[:500]}...
-Job Description: {job_text[:500]}...
-Identified Gaps: {json.dumps(gaps[:10])}
-
-Enhance these gaps with importance and context.""")
-        ])
+        # Use direct messages — NOT ChatPromptTemplate — because json.dumps() output
+        # contains braces that str.format() would interpret as template variables.
+        system_msg = SystemMessage(content=(
+            "You are an expert career coach analyzing skill gaps.\n"
+            "Given the identified gaps, provide enhanced analysis with:\n"
+            "1. Importance ranking (0-10) based on job requirements\n"
+            "2. Learning difficulty assessment\n"
+            "3. Transferable skills the candidate might leverage\n"
+            "Return the enhanced gaps as JSON array with the same structure plus your insights."
+        ))
+        user_content = (
+            f"Resume: {resume_text[:500]}...\n"
+            f"Job Description: {job_text[:500]}...\n"
+            f"Identified Gaps: {json.dumps(gaps[:10])}\n\n"
+            "Enhance these gaps with importance and context."
+        )
+        human_msg = HumanMessage(content=user_content)
         
         try:
-            response = self.llm.invoke(prompt.format_messages())
+            response = self.llm.invoke([system_msg, human_msg])
             enhanced = json.loads(response.content)
             return enhanced if isinstance(enhanced, list) else gaps
         except:
             return gaps
+            
+    def validate_skills_schema(self, skills: List[Dict]) -> List[Dict]:
+        """Validate and normalise skill items to match the expected schema precisely"""
+        valid_skills = []
+        if not isinstance(skills, list):
+            return []
+            
+        for item in skills:
+            if not isinstance(item, dict):
+                continue
+                
+            skill_name = item.get('name') or item.get('skill') or item.get('title')
+            if not skill_name or not isinstance(skill_name, str):
+                continue
+                
+            proficiency = item.get('proficiency')
+            if proficiency is None:
+                proficiency = item.get('level')
+            if proficiency is None:
+                proficiency = 5.0
+                
+            try:
+                proficiency = float(proficiency)
+            except:
+                proficiency = 5.0
+                
+            category = item.get('category') or item.get('type') or 'general'
+            
+            valid_skills.append({
+                "name": skill_name.strip(),
+                "proficiency": min(max(proficiency, 0.0), 10.0),
+                "category": str(category).strip()
+            })
+            
+        return valid_skills
     
     def __call__(self, state: AgentState) -> AgentState:
         """
@@ -261,8 +302,13 @@ Enhance these gaps with importance and context.""")
                 print(f"  [ERROR] Skill extraction not completed, status: {state.get('extraction_status')}")
                 raise Exception("Skill extraction not completed")
             
-            candidate_skills = state["candidate_skills"]
-            required_skills = state["required_skills"]
+            # Validate input schemas safely before processing
+            candidate_skills = self.validate_skills_schema(state.get("candidate_skills", []))
+            required_skills = self.validate_skills_schema(state.get("required_skills", []))
+            
+            # Update state with normalized schema structures
+            state["candidate_skills"] = candidate_skills
+            state["required_skills"] = required_skills
             
             # Validate skills exist
             if not candidate_skills and not required_skills:
@@ -287,7 +333,7 @@ Enhance these gaps with importance and context.""")
             state["gap_analysis_status"] = "completed"
             
             # Print critical gaps
-            critical_gaps = [g for g in gap_analysis['gaps'] if g['gap_severity'] == 'critical']
+            critical_gaps = [g for g in gap_analysis['gaps'] if g.get('gap_severity') == 'critical']
             if critical_gaps:
                 print(f"  [WARNING] Critical gaps: {[g.get('skill', 'unknown') for g in critical_gaps[:5]]}")
             

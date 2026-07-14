@@ -23,19 +23,27 @@ class SkillGapVisualizer:
         """Create radar chart comparing candidate vs required skills"""
         
         # Get common skills for comparison
-        candidate_map = {s['name']: s['proficiency'] for s in candidate_skills}
-        required_map = {s['name']: s['proficiency'] for s in required_skills}
+        candidate_map = {
+            (s.get('name') or s.get('skill') or s.get('title') or 'unknown'): 
+            s.get('proficiency', s.get('level', 5.0)) 
+            for s in candidate_skills if isinstance(s, dict)
+        }
+        required_map = {
+            (s.get('name') or s.get('skill') or s.get('title') or 'unknown'): 
+            s.get('proficiency', s.get('level', 5.0)) 
+            for s in required_skills if isinstance(s, dict)
+        }
         
         # Find skills to compare (top 8 required skills)
         skills_to_compare = sorted(
             required_skills,
-            key=lambda x: x['proficiency'],
+            key=lambda x: x.get('proficiency', x.get('level', 0.0)) if isinstance(x, dict) else 0.0,
             reverse=True
         )[:8]
         
-        categories = [s['name'] for s in skills_to_compare]
-        candidate_values = [candidate_map.get(s['name'], 0) for s in skills_to_compare]
-        required_values = [s['proficiency'] for s in skills_to_compare]
+        categories = [s.get('name', s.get('skill', s.get('title', 'unknown'))) for s in skills_to_compare if isinstance(s, dict)]
+        candidate_values = [candidate_map.get(cat, 0.0) for cat in categories]
+        required_values = [required_map.get(cat, 0.0) for cat in categories]
         
         fig = go.Figure()
         
@@ -76,18 +84,29 @@ class SkillGapVisualizer:
         
         # Sort by severity
         severity_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-        sorted_gaps = sorted(skill_gaps, key=lambda x: severity_order.get(x['gap_severity'], 4))[:15]
+        sorted_gaps = sorted(
+            skill_gaps, 
+            key=lambda x: severity_order.get(x.get('gap_severity', 'low') if isinstance(x, dict) else 'low', 4)
+        )[:15]
         
-        skills = [g['skill'] for g in sorted_gaps]
-        gap_values = [g['required_proficiency'] - g['current_proficiency'] for g in sorted_gaps]
+        skills = [g.get('skill', g.get('name', 'unknown')) for g in sorted_gaps if isinstance(g, dict)]
+        gap_values = [
+            float(g.get('required_proficiency', g.get('required', 0.0))) - 
+            float(g.get('current_proficiency', g.get('current', 0.0))) 
+            for g in sorted_gaps if isinstance(g, dict)
+        ]
         colors = []
         
         for g in sorted_gaps:
-            if g['gap_severity'] == 'critical':
+            if not isinstance(g, dict):
+                colors.append('rgb(76, 175, 80)')
+                continue
+            severity = g.get('gap_severity', 'low')
+            if severity == 'critical':
                 colors.append('rgb(220, 53, 69)')
-            elif g['gap_severity'] == 'high':
+            elif severity == 'high':
                 colors.append('rgb(255, 193, 7)')
-            elif g['gap_severity'] == 'medium':
+            elif severity == 'medium':
                 colors.append('rgb(255, 235, 59)')
             else:
                 colors.append('rgb(76, 175, 80)')
@@ -122,14 +141,18 @@ class SkillGapVisualizer:
         start_week = 0
         
         for skill, courses in roadmap.items():
+            if not isinstance(courses, list):
+                continue
             for course in courses:
-                duration_weeks = course.get('duration_hours', 10) / 10  # 10 hours per week
+                if not isinstance(course, dict):
+                    continue
+                duration_weeks = course.get('duration_hours', 10.0) / 10.0  # 10 hours per week
                 tasks.append({
                     'Skill': skill,
-                    'Course': course['course_title'][:40],
+                    'Course': str(course.get('course_title', 'unknown'))[:40],
                     'Start': start_week,
                     'Duration': duration_weeks,
-                    'Platform': course['platform']
+                    'Platform': str(course.get('platform', 'unknown'))
                 })
                 start_week += duration_weeks
         
@@ -172,6 +195,8 @@ class SkillGapVisualizer:
         # Count skills by category
         required_categories = {}
         for skill in required_skills:
+            if not isinstance(skill, dict):
+                continue
             cat = skill.get('category', 'other')
             required_categories[cat] = required_categories.get(cat, 0) + 1
         

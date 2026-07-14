@@ -300,7 +300,22 @@ async def create_analysis(
         
         status = analysis_results[analysis_id].get("status", "failed")
         progress = analysis_results[analysis_id].get("progress", "Failed")
-        message = "Analysis completed successfully." if status == "completed" else f"Analysis failed: {analysis_results[analysis_id].get('error', 'unknown error')}"
+        
+        # Check if skills were extracted successfully
+        result_data = analysis_results[analysis_id].get("result", {})
+        cand_skills = result_data.get("candidate_skills", []) if isinstance(result_data, dict) else []
+        
+        if status == "failed" or not cand_skills:
+            err_msg = analysis_results[analysis_id].get("error", "No skills extracted from resume.")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "No skills extracted from resume." if "No skills" in str(err_msg) or status == "failed" else str(err_msg)
+                }
+            )
+            
+        message = "Analysis completed successfully."
         
         return AnalysisStatusResponse(
             analysis_id=analysis_id,
