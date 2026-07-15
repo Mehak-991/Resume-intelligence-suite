@@ -86,3 +86,8 @@ Cold_Emails.json
 cmd.txt
 tsconfig.tsbuildinfo
 
+# Generated visualizations
+outputs/
+py_files/SKILL_GAP_ANALYZER/outputs/
+
+
