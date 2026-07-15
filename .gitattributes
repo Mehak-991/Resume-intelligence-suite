@@ -1,0 +1,12 @@
+# Mark generated Plotly HTML files as generated so they are excluded from language statistics
+*.html linguist-generated=true
+outputs/** linguist-generated=true
+py_files/**/outputs/** linguist-generated=true
+
+# Mark other generated/virtual environments/dependency folders just in case
+node_modules/** linguist-generated=true
+.next/** linguist-generated=true
+dist/** linguist-generated=true
+build/** linguist-generated=true
+venv/** linguist-generated=true
+.venv/** linguist-generated=true

@@ -79,9 +79,12 @@ faiss_store_enhanced/
 uploads/
 audio_files/
 reports/
+outputs/
+**/outputs/
 uploaded.pdf
 optimized_resume.txt
 Cold_Emails.json
 cmd.txt
 tsconfig.tsbuildinfo
+
 
