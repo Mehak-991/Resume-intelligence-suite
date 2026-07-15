@@ -2,6 +2,7 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "build": "next build",
     "dev": "concurrently \"next dev\" \"py -m uvicorn doc_summarizer:app --reload --app-dir py_files --port 8000 --log-level error\" \"py -m uvicorn resume_optimizer:app --reload --app-dir py_files --port 8080 --log-level error\" \"py -m uvicorn main:app --reload --app-dir py_files/INTERVIEW --port 8082 --log-level error\" \"py -m uvicorn chatbot:app --reload --app-dir py_files --port 8083 --log-level error\" \".\\py_files\\SKILL_GAP_ANALYZER\\venv\\Scripts\\python.exe -m uvicorn main:app --reload --app-dir py_files/SKILL_GAP_ANALYZER --port 8002 --log-level error\"",
