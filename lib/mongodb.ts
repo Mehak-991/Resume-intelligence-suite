@@ -1,17 +1,5 @@
 import { MongoClient, MongoClientOptions } from "mongodb"
 
-if (!process.env.MONGODB_URI) {
-  throw new Error(
-    'Missing environment variable: "MONGODB_URI". ' +
-    'Make sure your .env file has a valid MONGODB_URI (no duplicate prefix).'
-  )
-}
-
-const uri = process.env.MONGODB_URI
-console.log("[MongoDB] URI loaded (host):", (() => {
-  try { return new URL(uri).hostname } catch { return "parse-error" }
-})())
-
 const options: MongoClientOptions = {
   connectTimeoutMS: 10000,
   serverSelectionTimeoutMS: 10000,
@@ -22,50 +10,76 @@ const options: MongoClientOptions = {
   retryReads: true,
 }
 
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
-
 declare global {
   // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined
 }
 
-if (process.env.NODE_ENV === "development") {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    global._mongoClientPromise = client.connect().then((c) => {
-      console.log("[MongoDB] Connected successfully ✅")
+let clientPromise: Promise<MongoClient> | null = null
+
+export function getClientPromise(): Promise<MongoClient> {
+  if (clientPromise) {
+    return clientPromise
+  }
+
+  const uri = process.env.MONGODB_URI
+  if (!uri) {
+    throw new Error(
+      'Missing environment variable: "MONGODB_URI". ' +
+      'Make sure your environment has a valid MONGODB_URI.'
+    )
+  }
+
+  console.log("[MongoDB] Connecting to host:", (() => {
+    try { return new URL(uri).hostname } catch { return "parse-error" }
+  })())
+
+  if (process.env.NODE_ENV === "development") {
+    if (!global._mongoClientPromise) {
+      const client = new MongoClient(uri, options)
+      global._mongoClientPromise = client.connect().then((c) => {
+        console.log("[MongoDB] Connected successfully ✅")
+        return c
+      }).catch((err) => {
+        console.error("[MongoDB] Connection failed:", err.message)
+        global._mongoClientPromise = undefined
+        throw err
+      })
+    }
+    clientPromise = global._mongoClientPromise
+  } else {
+    const client = new MongoClient(uri, options)
+    clientPromise = client.connect().then((c) => {
+      console.log("[MongoDB] Connected successfully (production) ✅")
       return c
-    }).catch((err) => {
-      console.error("[MongoDB] Connection failed:", err.message)
-      // Clear the global so the next request retries
-      global._mongoClientPromise = undefined
-      throw err
     })
   }
-  clientPromise = global._mongoClientPromise as Promise<MongoClient>
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect().then((c) => {
-    console.log("[MongoDB] Connected successfully (production) ✅")
-    return c
-  })
+
+  return clientPromise
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise
+// Lazy/Safe default export promise to prevent top-level connection attempts during next build
+const defaultExportPromise: Promise<MongoClient> = new Promise<MongoClient>((resolve, reject) => {
+  if (typeof window !== "undefined") {
+    return; // Don't run client-side
+  }
+  // Wait until next tick to check if we actually have MONGODB_URI (safe for next build scan)
+  process.nextTick(() => {
+    if (!process.env.MONGODB_URI) {
+      // Don't reject or throw instantly at build-time to avoid failing next build
+      console.warn("[MongoDB] Warning: MONGODB_URI is not set during module initialization.");
+      resolve({} as MongoClient);
+      return;
+    }
+    getClientPromise().then(resolve).catch(reject);
+  });
+});
 
-/**
- * Helper: get a connected DB instance with proper error handling.
- * Usage: const db = await getDb("resumeiq")
- */
+export default defaultExportPromise
+
 export async function getDb(dbName = "resumeiq") {
   try {
-    const client = await clientPromise
+    const client = await getClientPromise()
     return client.db(dbName)
   } catch (error) {
     const err = error as Error & { code?: string; cause?: { code?: string } }
