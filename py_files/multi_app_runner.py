@@ -11,7 +11,7 @@ if __name__ == "__main__":
     # List of tuples: (app_import_string, port)
     # Replace 'resume_optimizer:app' with your actual file and app names
     services = [
-        ("resume_optimizer:app", 8080),  # Your existing app
+        ("resume_optimizer:app", 8081),  # Your existing app
         ("doc_summarizer:app", 8000),   # Example second app
         ("chatbot:app", 8083),    # Example third app
     ]
