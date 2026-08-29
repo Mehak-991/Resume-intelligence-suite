@@ -14,7 +14,7 @@ from langchain_groq import ChatGroq
 load_dotenv()
 
 qlm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     timeout=30
 )
 

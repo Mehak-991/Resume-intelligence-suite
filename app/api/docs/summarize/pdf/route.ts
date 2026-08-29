@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward file to Python FastAPI backend
+    const buffer = Buffer.from(await file.arrayBuffer())
     const pythonFormData = new FormData()
-    pythonFormData.append("file", file)
+    const blob = new Blob([buffer], { type: file.type })
+    pythonFormData.append("file", blob, file.name)
 
     const response = await fetch(`${PYTHON_API_URL}/summarize/pdf`, {
       method: "POST",
