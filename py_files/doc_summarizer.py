@@ -265,13 +265,19 @@ async def summarize_url(url: str = Form(...)):
 @app.post("/summarize/pdf")
 async def summarize_pdf(file: UploadFile = File(...)):
     """Summarize an uploaded PDF file."""
-    file_path = "uploaded.pdf"
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
+    try:
+        file_path = "uploaded.pdf"
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
 
-    text = extract_text_from_pdf(file_path)
-    result = summarize_text_document(text)
-    return result
+        text = extract_text_from_pdf(file_path)
+        result = summarize_text_document(text)
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------
 # Run command:
