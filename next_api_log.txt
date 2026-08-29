@@ -1,0 +1,25 @@
+Error: Error: Python API request failed
+Message: Python API request failed
+Stack: Error: Python API request failed
+    at POST (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\.next\dev\server\chunks\[root-of-the-server]__56a64d37._.js:92:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async AppRouteRouteModule.do (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\.next\dev\server\chunks\e559b_next_c8a3a18a._.js:14333:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\.next\dev\server\chunks\e559b_next_c8a3a18a._.js:14395:32)
+    at async handler (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\.next\dev\server\chunks\e559b_next_c8a3a18a._.js:14448:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\lib\start-server.js:226:13)
+Cause: undefined

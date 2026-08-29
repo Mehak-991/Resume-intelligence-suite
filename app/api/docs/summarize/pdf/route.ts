@@ -34,12 +34,21 @@ export async function POST(req: NextRequest) {
     })
 
     if (!response.ok) {
-      throw new Error("Python API request failed")
+      const errText = await response.text()
+      console.error(`PYTHON ERROR STATUS: ${response.status}`)
+      console.error(`PYTHON ERROR BODY: ${errText}`)
+      throw new Error(`Python API request failed: ${response.status} ${errText}`)
     }
 
     const data = await response.json()
+    console.log("SUCCESSFULLY PARSED JSON FROM PYTHON")
     return NextResponse.json(data)
   } catch (error) {
+    const fs = require('fs');
+    fs.appendFileSync('next_api_log.txt', 'Error: ' + error + '\n');
+    if (error instanceof Error) {
+        fs.appendFileSync('next_api_log.txt', 'Message: ' + error.message + '\nStack: ' + error.stack + '\nCause: ' + error.cause + '\n');
+    }
     console.error("PDF summarization error:", error)
     return NextResponse.json({ error: "Failed to summarize PDF" }, { status: 500 })
   }
