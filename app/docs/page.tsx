@@ -230,7 +230,30 @@ export default function DocsPage() {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {result.final_summary && (
+                  {result.error && (
+                    <Card className="p-6 bg-destructive/10 border-destructive/20 text-destructive">
+                      <h3 className="text-sm font-semibold mb-2">Error</h3>
+                      <p>{result.error}</p>
+                    </Card>
+                  )}
+                  {result.detail && (
+                    <Card className="p-6 bg-destructive/10 border-destructive/20 text-destructive">
+                      <h3 className="text-sm font-semibold mb-2">Error</h3>
+                      <p>{result.detail}</p>
+                    </Card>
+                  )}
+                  
+                  {result.final_summary?.error_raw && (
+                    <Card className="p-6 bg-destructive/10 border-destructive/20">
+                      <h3 className="text-sm font-semibold text-destructive mb-2">Error Parsing LLM Output</h3>
+                      <p className="text-sm mb-4">The AI returned an invalid response. Raw output:</p>
+                      <pre className="text-xs overflow-auto max-h-96 p-4 bg-muted rounded-md text-foreground">
+                        {result.final_summary.error_raw}
+                      </pre>
+                    </Card>
+                  )}
+
+                  {result.final_summary && !result.final_summary.error_raw && (
                     <>
                       {result.final_summary.final_tldr && (
                         <Card className="p-6 bg-primary/5 border-primary/20">
@@ -277,6 +300,13 @@ export default function DocsPage() {
                           </Card>
                         )}
                     </>
+                  )}
+                  
+                  {!result.error && !result.detail && !result.final_summary && (
+                    <Card className="p-6 bg-muted/50 border-muted">
+                      <h3 className="text-sm font-semibold mb-2">No Summary Available</h3>
+                      <p className="text-sm text-muted-foreground">The API did not return a valid summary structure. Click "View Raw JSON" to inspect the output.</p>
+                    </Card>
                   )}
                 </div>
               )}

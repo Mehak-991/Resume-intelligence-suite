@@ -137,6 +137,14 @@ def summarize_chunk_with_prompt(chunk_text, max_retries=2, retry_delay=1.0):
             try:
                 return json.loads(raw)
             except json.JSONDecodeError:
+                # Remove markdown code blocks if present
+                if "```json" in raw:
+                    raw = raw.split("```json")[1].split("```")[0].strip()
+                    try:
+                        return json.loads(raw)
+                    except:
+                        pass
+                
                 # Extract JSON substring if extra text exists
                 s = raw.find("{")
                 e = raw.rfind("}")
@@ -198,6 +206,13 @@ Only return JSON.
     try:
         return json.loads(raw)
     except:
+        if "```json" in raw:
+            raw_stripped = raw.split("```json")[1].split("```")[0].strip()
+            try:
+                return json.loads(raw_stripped)
+            except:
+                pass
+        
         s = raw.find("{")
         e = raw.rfind("}")
         if s != -1 and e != -1:
