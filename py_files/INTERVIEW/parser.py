@@ -28,10 +28,9 @@ class ResumeJDParser:
     def _parse_pdf(self, file_path):
         """Extract text from PDF using PyMuPDF (fitz)."""
         text = ""
-        doc = fitz.open(file_path)
-        for page in doc:
-            text += page.get_text()
-        doc.close()
+        with fitz.open(file_path) as doc:
+            for page in doc:
+                text += page.get_text()
         return text.strip()
 
     def _parse_docx(self, file_path):

@@ -56,15 +56,13 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     """Extract text from PDF bytes using PyMuPDF"""
     try:
         # Open PDF from bytes
-        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
-        text = ""
-        
-        # Extract text from each page
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document[page_num]
-            text += page.get_text()
-        
-        pdf_document.close()
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as pdf_document:
+            text = ""
+            
+            # Extract text from each page
+            for page_num in range(pdf_document.page_count):
+                page = pdf_document[page_num]
+                text += page.get_text()
         
         if not text.strip():
             raise ValueError("PDF appears to be empty or contains only images")

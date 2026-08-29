@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
 
     // Upload resume to Cloudinary
     let resumeUrl: string | null = null
+    const buffer = Buffer.from(await resume.arrayBuffer())
     try {
-      const buffer = Buffer.from(await resume.arrayBuffer())
       const uploadResult = await new Promise<any>((resolve, reject) => {
         cloudinary.uploader.upload_stream(
           {
@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
     }
 
     const pythonFormData = new FormData()
-    pythonFormData.append("resume", resume)
+    const blob = new Blob([buffer], { type: resume.type })
+    pythonFormData.append("resume", blob, resume.name)
     pythonFormData.append("job_description", jdText)
 
     let pythonRes: Response

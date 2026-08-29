@@ -24,13 +24,12 @@ qlm = ChatGroq(
 # -------------------------------
 def extract_text_from_pdf(file_path, max_chars=None):
     text = ""
-    pdf_document = fitz.open(file_path)
-    for page_num in range(len(pdf_document)):
-        page = pdf_document[page_num]
-        page_text = page.get_text()
-        if page_text:
-            text += page_text + "\n"
-    pdf_document.close()
+    with fitz.open(file_path) as pdf_document:
+        for page_num in range(len(pdf_document)):
+            page = pdf_document[page_num]
+            page_text = page.get_text()
+            if page_text:
+                text += page_text + "\n"
     if max_chars:
         return text[:max_chars]
     return text
