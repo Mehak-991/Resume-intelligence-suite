@@ -6,7 +6,7 @@ import { getUserFromRequest } from "@/lib/auth"
 // TODO: Add async queue for long-running summarization tasks
 // TODO: Add rate limiting
 
-const PYTHON_API_URL = process.env.PYTHON_DOCS_API_URL || "http://localhost:8000"
+const PYTHON_API_URL = process.env.PYTHON_DOCS_API_URL || "http://127.0.0.1:8000"
 
 export async function POST(req: NextRequest) {
   try {

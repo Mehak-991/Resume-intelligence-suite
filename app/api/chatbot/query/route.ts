@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Proxy to Python chatbot API at /py_files/chatbot.py
     // The Python API maintains in-memory conversation history per session
-    const pythonApiUrl = process.env.PYTHON_CHATBOT_API_URL || "http://localhost:8083"
+    const pythonApiUrl = process.env.PYTHON_CHATBOT_API_URL || "http://127.0.0.1:8083"
 
     const response = await fetch(`${pythonApiUrl}/ask`, {
       method: "POST",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const SKILL_GAP_API = process.env.SKILL_GAP_API_URL ?? "http://localhost:8002"
+const SKILL_GAP_API = process.env.SKILL_GAP_API_URL ?? "http://127.0.0.1:8002"
 
 /**
  * POST /api/skill-gap/analyze

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const INTERVIEW_API_URL = process.env.INTERVIEW_API_URL || "http://localhost:8082"
+const INTERVIEW_API_URL = process.env.INTERVIEW_API_URL || "http://127.0.0.1:8082"
 
 export async function POST(request: NextRequest) {
     try {

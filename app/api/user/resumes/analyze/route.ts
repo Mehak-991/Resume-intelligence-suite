@@ -6,7 +6,7 @@ import { getUserFromRequest } from "@/lib/auth"
 
 export const runtime = "nodejs"
 
-const PYTHON_API_URL = process.env.PYTHON_RESUME_API_URL || "http://localhost:8080"
+const PYTHON_API_URL = process.env.PYTHON_RESUME_API_URL || "http://127.0.0.1:8080"
 
 // Configure Cloudinary using CLOUDINARY_URL
 if (process.env.CLOUDINARY_URL) {
