@@ -13,11 +13,30 @@ from langchain_groq import ChatGroq
 
 load_dotenv()
 
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+def validate_groq_setup():
+    if not GROQ_API_KEY:
+        return False, "GROQ_API_KEY is missing."
+    try:
+        resp = requests.get('https://api.groq.com/openai/v1/models', headers={'Authorization': f'Bearer {GROQ_API_KEY}'})
+        if resp.status_code != 200:
+            return False, "Invalid GROQ_API_KEY."
+        models = [m['id'] for m in resp.json().get('data', [])]
+        if GROQ_MODEL not in models:
+            return False, f"Configured Groq model '{GROQ_MODEL}' is unavailable for the current API key/project."
+    except Exception as e:
+        return True, "Could not validate Groq models (network issue), proceeding anyway."
+    return True, "Valid"
+
+is_valid_groq, groq_err_msg = validate_groq_setup()
+if not is_valid_groq:
+    print(f"CRITICAL WARNING: {groq_err_msg}")
 
 qlm = ChatGroq(
     model=GROQ_MODEL,
-    groq_api_key=os.getenv("GROQ_API_KEY"),
+    groq_api_key=GROQ_API_KEY,
     timeout=30
 )
 
@@ -158,10 +177,25 @@ def summarize_chunk_with_prompt(chunk_text, max_retries=2, retry_delay=1.0):
                         return {"error_raw": raw}
 
         except Exception as e:
+            err_str = str(e)
+            err_msg = err_str
+            if "401" in err_str:
+                err_msg = "Invalid API Key (401)"
+            elif "403" in err_str:
+                err_msg = "Model/Project Permission Issue (403)"
+            elif "404" in err_str:
+                err_msg = "Model not found or not accessible (404)"
+            elif "429" in err_str:
+                err_msg = "Rate limit exceeded (429)"
+            elif "400" in err_str:
+                err_msg = "Invalid request (400)"
+            elif "50" in err_str:
+                err_msg = "Provider/Server issue (5xx)"
+
             if attempt < max_retries:
                 time.sleep(retry_delay)
             else:
-                return {"error": str(e)}
+                return {"error": err_msg}
 
     return {"error": "unknown"}
 
@@ -209,8 +243,19 @@ Return JSON with:
 Only return JSON.
 """
 
-    resp = qlm.invoke(SYSTEM_PROMPT + FINAL_PROMPT)
-    raw = resp.content.strip()
+    try:
+        resp = qlm.invoke(SYSTEM_PROMPT + FINAL_PROMPT)
+        raw = resp.content.strip()
+    except Exception as e:
+        err_str = str(e)
+        err_msg = err_str
+        if "401" in err_str: err_msg = "Invalid API Key (401)"
+        elif "403" in err_str: err_msg = "Model/Project Permission Issue (403)"
+        elif "404" in err_str: err_msg = "Model not found or not accessible (404)"
+        elif "429" in err_str: err_msg = "Rate limit exceeded (429)"
+        elif "400" in err_str: err_msg = "Invalid request (400)"
+        elif "50" in err_str: err_msg = "Provider/Server issue (5xx)"
+        return {"error": err_msg}
 
     try:
         return json.loads(raw)
@@ -238,6 +283,9 @@ Only return JSON.
 # ---------------------------------------------------------
 
 def summarize_text_document(full_text: str):
+    if not is_valid_groq:
+        return {"error": groq_err_msg}
+    
     chunks = chunk_text(full_text)
     chunk_results = []
 
