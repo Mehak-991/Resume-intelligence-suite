@@ -27,3 +27,7 @@ Stack: Error: Python API request failed: 500 {"detail":"Error code: 413 - {'erro
     at async requestHandlerImpl (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\lib\router-server.js:484:13)
     at async Server.requestListener (C:\Users\HP\Desktop\web dev project\resume_suite\Resume-intelligence-suite\node_modules\.pnpm\next@16.0.7_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\server\lib\start-server.js:226:13)
 Cause: undefined
+Error: TypeError: fetch failed
+Message: fetch failed
+Stack: TypeError: fetch failed
+Cause: Error: connect ECONNREFUSED 127.0.0.1:8000
