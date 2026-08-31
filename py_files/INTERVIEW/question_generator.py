@@ -18,7 +18,7 @@ class QuestionGenerator:
             raise ValueError("GROQ_API_KEY not found in environment variables")
         
         self.client = Groq(api_key=self.api_key)
-        self.model = "openai/gpt-oss-120b"
+        self.model = "mixtral-8x7b-32768"
     
     def generate_questions(self, resume_text, jd_text):
         """

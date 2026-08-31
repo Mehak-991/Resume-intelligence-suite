@@ -118,7 +118,7 @@ class EnhancedRAGPipeline:
 
         # Initialize Groq LLM with correct model name
         self.llm = ChatGroq(
-            model="openai/gpt-oss-120b",
+            model="mixtral-8x7b-32768",
             temperature=0.2
         )
         print("RAG Pipeline initialized (TF-IDF mode — no model download needed)!")

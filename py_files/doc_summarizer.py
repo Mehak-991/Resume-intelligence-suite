@@ -14,7 +14,7 @@ from langchain_groq import ChatGroq
 load_dotenv()
 
 qlm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="mixtral-8x7b-32768",
     timeout=30
 )
 
