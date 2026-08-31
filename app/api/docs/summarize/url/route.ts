@@ -6,7 +6,7 @@ import { getUserFromRequest } from "@/lib/auth"
 // TODO: Add async queue for long-running summarization tasks
 // TODO: Add rate limiting
 
-const PYTHON_API_URL = process.env.PYTHON_DOCS_API_URL || "http://127.0.0.1:8005"
+const PYTHON_API_URL = process.env.PYTHON_DOCS_API_URL || "http://127.0.0.1:8000"
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,13 +32,21 @@ export async function POST(req: NextRequest) {
     })
 
     if (!response.ok) {
-      throw new Error("Python API request failed")
+      const errText = await response.text()
+      console.error("Document summarizer Python API error:", response.status, errText)
+      return NextResponse.json(
+        { 
+          error: "Document summarization failed", 
+          details: "The backend service encountered an error while processing your request."
+        }, 
+        { status: response.status }
+      )
     }
 
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error) {
-    console.error("Document summarization error:", error)
+    console.error("Document summarization exception:", error)
     return NextResponse.json({ error: "Failed to summarize document" }, { status: 500 })
   }
 }

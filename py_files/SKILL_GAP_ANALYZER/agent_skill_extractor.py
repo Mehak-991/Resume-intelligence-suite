@@ -26,7 +26,7 @@ class SkillExtractorAgent:
         
         self.llm = ChatGroq(
             api_key=self.groq_api_key,
-            model="mixtral-8x7b-32768",
+            model="llama-3.3-70b-versatile",
             temperature=0.1,
             max_retries=3
         )

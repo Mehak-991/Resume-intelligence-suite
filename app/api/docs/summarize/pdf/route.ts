@@ -6,7 +6,7 @@ import { getUserFromRequest } from "@/lib/auth"
 // TODO: Add async queue for long-running summarization tasks
 // TODO: Add file size validation
 
-const PYTHON_API_URL = process.env.PYTHON_DOCS_API_URL || "http://127.0.0.1:8005"
+const PYTHON_API_URL = process.env.PYTHON_DOCS_API_URL || "http://127.0.0.1:8000"
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,21 +35,21 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error(`PYTHON ERROR STATUS: ${response.status}`)
-      console.error(`PYTHON ERROR BODY: ${errText}`)
-      throw new Error(`Python API request failed: ${response.status} ${errText}`)
+      console.error("Document summarizer Python API error:", response.status, errText)
+      return NextResponse.json(
+        { 
+          error: "PDF summarization failed", 
+          details: "The backend service encountered an error while processing your request."
+        }, 
+        { status: response.status }
+      )
     }
 
     const data = await response.json()
     console.log("SUCCESSFULLY PARSED JSON FROM PYTHON")
     return NextResponse.json(data)
   } catch (error) {
-    const fs = require('fs');
-    fs.appendFileSync('next_api_log.txt', 'Error: ' + error + '\n');
-    if (error instanceof Error) {
-        fs.appendFileSync('next_api_log.txt', 'Message: ' + error.message + '\nStack: ' + error.stack + '\nCause: ' + error.cause + '\n');
-    }
-    console.error("PDF summarization error:", error)
+    console.error("PDF summarization exception:", error)
     return NextResponse.json({ error: "Failed to summarize PDF" }, { status: 500 })
   }
 }

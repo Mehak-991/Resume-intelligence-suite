@@ -13,8 +13,11 @@ from langchain_groq import ChatGroq
 
 load_dotenv()
 
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 qlm = ChatGroq(
-    model="mixtral-8x7b-32768",
+    model=GROQ_MODEL,
+    groq_api_key=os.getenv("GROQ_API_KEY"),
     timeout=30
 )
 
@@ -168,14 +171,20 @@ def summarize_chunk_with_prompt(chunk_text, max_retries=2, retry_delay=1.0):
 # ---------------------------------------------------------
 
 def aggregate_chunk_summaries(chunk_summaries):
-    tldrs = [c.get("tldr", "") for c in chunk_summaries if c.get("tldr")]
+    # Filter out chunks that failed
+    valid_chunks = [c for c in chunk_summaries if not c.get("error") and not c.get("error_raw")]
+    
+    if not valid_chunks:
+        return {"error": "All chunks failed to summarize properly."}
+
+    tldrs = [c.get("tldr", "") for c in valid_chunks if c.get("tldr")]
 
     bullets = []
-    for c in chunk_summaries:
+    for c in valid_chunks:
         bullets.extend(c.get("bullets", []))
 
     key_facts = []
-    for c in chunk_summaries:
+    for c in valid_chunks:
         key_facts.extend(c.get("key_facts", []))
 
     merge_input = {
